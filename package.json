@@ -1,7 +1,7 @@
 {
   "name": "stian-baileys",
   "type": "module",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A WhatsApp Web API library — Baileys 7.x with group status/story support, scoped libsignal log filtering, and a CommonJS entry point",
   "keywords": [
     "whatsapp",

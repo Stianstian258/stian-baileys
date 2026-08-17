@@ -114,6 +114,21 @@ npm install stian-baileys
 
 Requires Node 20+ (Node 20.19+ or 22.12+ if you're loading it from CommonJS).
 
+## Versioning
+
+This package is `0.x` on purpose. It tracks upstream Baileys **7.0.0-rc14**, a release candidate,
+so the API underneath it can still change. Per semver, `0.x` means the public API is not yet
+declared stable, and breaking changes land in the **minor** slot — `0.1.0` → `0.2.0`, not `2.0.0`.
+
+Pin accordingly if you need stability:
+
+```bash
+npm install stian-baileys@~0.1.0   # patch updates only
+```
+
+Once upstream ships 7.0.0 final and this API settles, it moves to `1.0.0` and normal semver
+guarantees apply from there.
+
 ## Usage
 
 Identical to upstream Baileys â€” see the
