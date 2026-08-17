@@ -39,9 +39,7 @@
   ],
   "scripts": {
     "build": "tsc -P tsconfig.build.json && tsc-esm-fix --tsconfig=tsconfig.build.json --ext=.js",
-    "build:docs": "typedoc",
     "clean": "node -e \"require('fs').rmSync('lib',{recursive:true,force:true})\"",
-    "example": "tsx ./Example/example.ts",
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
     "gen:protobuf": "sh WAProto/GenerateStatics.sh",
     "lint": "eslint src/Socket/status.ts src/Utils/log-filter.ts src/Types/Stian.ts src/__tests__/Socket/stian-status.test.ts src/__tests__/Utils/log-filter.test.ts",
@@ -93,9 +91,6 @@
     "protobufjs-cli": "^1.1.3",
     "ts-jest": "^29.4.0",
     "tsc-esm-fix": "^3.1.2",
-    "tsx": "^4.20.3",
-    "typedoc": "^0.27.9",
-    "typedoc-plugin-markdown": "4.4.2",
     "typescript": "^5.8.2"
   },
   "peerDependencies": {

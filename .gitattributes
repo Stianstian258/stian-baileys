@@ -1,2 +1,15 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Generated protobuf output. Marking it as generated keeps GitHub's language
+# statistics meaningful and collapses it in diffs and pull requests.
+WAProto/index.js   linguist-generated=true
+WAProto/index.d.ts linguist-generated=true
+WAProto/WAProto.proto linguist-generated=true
+
+# Build output, should it ever be committed on a branch
+lib/** linguist-generated=true
+cjs/index.cjs -linguist-generated
+
+# Binary test fixtures should not count toward language stats
+Media/** linguist-vendored=true

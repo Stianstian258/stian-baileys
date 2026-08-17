@@ -1,0 +1,27 @@
+chore: remove unused upstream tooling and mark generated files
+
+Drops inherited files this fork never used:
+
+- Example/          upstream's demo script
+- proto-extract/    upstream tooling for extracting WAProto from WhatsApp Web
+- scripts/          upstream's version bumper, already unreferenced
+- typedoc.json      API doc config, with the build:docs script
+- .npmignore        empty; the package.json "files" field governs packaging
+
+Also drops the devDependencies those left orphaned: typedoc,
+typedoc-plugin-markdown and tsx. esbuild-register and jiti are kept, since
+they load jest.config.ts and eslint.config.mts respectively.
+
+Media/ is deliberately kept: the e2e tests read cat.jpeg, ma_gif.mp4 and
+sonata.mp3 from it.
+
+.gitattributes now marks WAProto output as linguist-generated and Media as
+vendored, so GitHub's language stats reflect the actual TypeScript source
+rather than a 4.4 MB generated protobuf file, and diffs collapse it.
+
+No effect on the published package: the tarball is still 414 files / 1.0 MB,
+since src/ and tooling were already excluded by "files".
+
+Verified: tsc --noEmit clean, 30 suites / 428 tests pass after pruning
+node_modules to the new dependency set, build emits 101 .js + 101 .d.ts, and
+the CJS entry still resolves 272 exports.
