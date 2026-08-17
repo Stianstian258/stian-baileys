@@ -189,13 +189,12 @@ npm run test:cjs    # verifies the CommonJS entry
 npm run verify      # all of the above
 ```
 
-Unlike some Baileys forks, `lib/` is **never** hand-edited â€” it is always generated from `src/`.
+`lib/` is **never** hand-edited â€” it is always generated from `src/`.
 That's what keeps the types, the sourcemaps, and the ability to rebase.
 
 ## Credits
 
 Built on [Baileys](https://github.com/WhiskeySockets/Baileys) by Rajeh Taher and the WhiskeySockets
-contributors, MIT licensed. The group-status approach was informed by
-[gifted-baileys](https://github.com/mauricegift/gifted-baileys).
+contributors, MIT licensed.
 
 Licensed under MIT. See [LICENSE](./LICENSE).

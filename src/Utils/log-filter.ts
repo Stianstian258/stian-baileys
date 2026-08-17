@@ -5,7 +5,7 @@
  * The chatter people actually complain about ("Closing session:", "Bad MAC", ...) comes from
  * `libsignal`, which writes straight to `console`. This module silences exactly those calls.
  *
- * Design constraints, learned from other forks that got this wrong:
+ * Design constraints:
  *   - `process.stdout` / `process.stderr` are never touched. Patching them swallows every
  *     write in the process, including your own application output.
  *   - patterns are anchored to the START of the first string argument, so an application log
