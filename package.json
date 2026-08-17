@@ -11,13 +11,13 @@
     "automation",
     "group-status"
   ],
-  "homepage": "https://github.com/stian-baileys/stian-baileys#readme",
+  "homepage": "https://github.com/Stianstian258/stian-baileys#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stian-baileys/stian-baileys.git"
+    "url": "git+https://github.com/Stianstian258/stian-baileys.git"
   },
   "bugs": {
-    "url": "https://github.com/stian-baileys/stian-baileys/issues"
+    "url": "https://github.com/Stianstian258/stian-baileys/issues"
   },
   "license": "MIT",
   "main": "lib/index.js",
