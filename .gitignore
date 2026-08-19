@@ -2,6 +2,7 @@
 .env
 .yarn/
 *.tgz
+*.bundle
 */.DS_Store
 auth_info*.json
 baileys_auth_info*
@@ -9,12 +10,6 @@ baileys_store*.json
 browser-messages.json
 browser-token.json
 decoded-ws.json
-docs
-!docs/
-docs/*
-!docs/index.html
-!docs/404.html
-!docs/.nojekyll
 lib
 messages*.json
 node_modules
@@ -23,4 +18,5 @@ Proxy
 test.ts
 TestData
 wa-logs*
-coverageCOMMIT_MSG.tmp
+coverage
+COMMIT_MSG.tmp
