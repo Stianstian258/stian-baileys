@@ -1,5 +1,6 @@
 import { Mutex } from 'async-mutex'
 import { mkdir, readFile, stat, unlink, writeFile } from 'fs/promises'
+import PQueue from 'p-queue'
 import { join } from 'path'
 import { proto } from '../../WAProto/index.js'
 import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from '../Types'
@@ -11,6 +12,19 @@ import { BufferJSON } from './generics'
 // https://github.com/nodejs/node/issues/26338
 // Use a Map to store mutexes for each file path
 const fileLocks = new Map<string, Mutex>()
+
+/**
+ * stian-baileys: cap how many auth-state files are written at once.
+ *
+ * `keys.set()` receives one entry per key, and Baileys 7's LID mapping stores a file per
+ * contact. On a large account that is thousands of entries in a single call. Firing them all
+ * through `Promise.all` opens thousands of file descriptors at once, which on Windows
+ * exhausts the handle limit: writes fail or truncate to zero bytes, and the caller's
+ * commit-retry loop then retries the same oversized batch and fails identically.
+ *
+ * Bounding concurrency keeps throughput high while staying well inside the descriptor limit.
+ */
+const WRITE_CONCURRENCY = 32
 
 // Get or create a mutex for a specific file path
 const getFileLock = (path: string): Mutex => {
@@ -116,12 +130,15 @@ export const useMultiFileAuthState = async (
 					return data
 				},
 				set: async data => {
+					// stian-baileys: bounded concurrency, see WRITE_CONCURRENCY above.
+					const queue = new PQueue({ concurrency: WRITE_CONCURRENCY })
 					const tasks: Promise<void>[] = []
+
 					for (const category in data) {
 						for (const id in data[category as keyof SignalDataTypeMap]) {
 							const value = data[category as keyof SignalDataTypeMap]![id]
 							const file = `${category}-${id}.json`
-							tasks.push(value ? writeData(value, file) : removeData(file))
+							tasks.push(queue.add(() => (value ? writeData(value, file) : removeData(file))) as Promise<void>)
 						}
 					}
 

@@ -203,7 +203,9 @@ export const addTransactionCapability = (
 				return
 			} catch (error) {
 				const retriesLeft = maxCommitRetries - attempt - 1
-				logger.warn(`failed to commit mutations, retries left=${retriesLeft}`)
+				// stian-baileys: upstream logged only the message, which makes a failing auth
+				// store impossible to diagnose. Include the cause and what we were writing.
+				logger.warn({ error, retriesLeft, categories: Object.keys(mutations) }, 'failed to commit mutations')
 
 				if (retriesLeft === 0) {
 					throw error
