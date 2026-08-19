@@ -9,7 +9,7 @@ export * from './WAM/index'
 export * from './WAUSync/index'
 
 // stian-baileys additions
-export { isGroupStatusContent, makeStatusSocket, StianStatus } from './Socket/status'
+export { isGroupStatusContent, makeStatusSocket, StianApiError, StianStatus } from './Socket/status'
 
 export type WASocket = ReturnType<typeof makeWASocket>
 export { makeWASocket }

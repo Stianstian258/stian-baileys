@@ -14,27 +14,31 @@ Four things. That's the whole list.
 
 ### 1. Group statuses / stories
 
-Post a status visible to a group's members, via `sendMessage`:
+Post a status visible to a group's members. `sock.stianStatus` is the only supported route:
 
 ```ts
-await sock.sendMessage(groupJid, {
-	groupStatusMessage: { text: 'hello group' }
+// post a status to a single group's members
+const msgId = await sock.stianStatus.sendGroupStatus(groupJid, { text: 'hello group' })
+
+await sock.stianStatus.sendGroupStatus(groupJid, {
+	image: { url: './photo.jpg' },
+	caption: 'nice view'
 })
-
-await sock.sendMessage(groupJid, {
-	groupStatusMessage: { image: { url: './photo.jpg' }, caption: 'nice view' }
-})
-```
-
-Or through `sock.stianStatus` directly:
-
-```ts
-// one group
-const msgId = await sock.stianStatus.sendGroupStatus(groupJid, { text: 'hi' })
 
 // post to status@broadcast and notify several groups/contacts about it
 const status = await sock.stianStatus.sendStatusToGroups({ text: 'hi everyone' }, [groupJid1, groupJid2, contactJid])
 ```
+
+`sendMessage()` deliberately does **not** accept group-status content. Passing it throws a
+`StianApiError` naming the correct API, rather than silently relaying something WhatsApp will not
+render:
+
+```ts
+// throws StianApiError
+await sock.sendMessage(groupJid, { groupStatusMessage: { text: 'hello group' } })
+```
+
+For ordinary messages `sendMessage()` is untouched and behaves exactly as upstream Baileys.
 
 `sendStatusToGroups` randomises the font and colours for text statuses unless you set them:
 

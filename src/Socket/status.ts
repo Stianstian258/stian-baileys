@@ -7,7 +7,6 @@ import type {
 	MiscMessageGenerationOptions,
 	SocketConfig,
 	StianGroupStatusContent,
-	StianGroupStatusMessageContent,
 	StianStatusToGroupsContent,
 	WAMediaUploadFunction,
 	WAMessage,
@@ -51,11 +50,17 @@ const randomHexColor = () =>
 		.toString(16)
 		.padStart(6, '0')
 
-/** Narrowing guard for the `{ groupStatusMessage: ... }` shape accepted by `sendMessage`. */
-export const isGroupStatusContent = (
-	content: AnyMessageContent | StianGroupStatusMessageContent
-): content is StianGroupStatusMessageContent =>
-	typeof content === 'object' && content !== null && 'groupStatusMessage' in content && !!content.groupStatusMessage
+/**
+ * `true` when the value carries a `groupStatusMessage` key.
+ *
+ * Used to reject group-status content passed to `sendMessage()`, which is not a supported
+ * route. Post group statuses through `sock.stianStatus` instead.
+ */
+export const isGroupStatusContent = (content: unknown): content is { groupStatusMessage: unknown } =>
+	typeof content === 'object' &&
+	content !== null &&
+	'groupStatusMessage' in content &&
+	!!(content as { groupStatusMessage?: unknown }).groupStatusMessage
 
 type StianStatusDeps = {
 	config: SocketConfig
@@ -284,8 +289,20 @@ export class StianStatus {
 }
 
 /**
- * Final socket layer. Adds `sock.stianStatus` and teaches `sendMessage` the
- * `{ groupStatusMessage: ... }` shape, without modifying any upstream send path.
+ * Thrown when group-status content is passed to `sendMessage()` instead of going through
+ * `sock.stianStatus`.
+ */
+export class StianApiError extends Error {
+	constructor(message: string) {
+		super(message)
+		this.name = 'StianApiError'
+	}
+}
+
+/**
+ * Final socket layer. Adds `sock.stianStatus`, the only supported entry point for group
+ * statuses. `sendMessage()` keeps its exact upstream signature and behaviour for ordinary
+ * messages, but rejects group-status content rather than handling it.
  */
 export const makeStatusSocket = (config: SocketConfig) => {
 	const sock = makeCommunitiesSocket(config)
@@ -301,26 +318,23 @@ export const makeStatusSocket = (config: SocketConfig) => {
 	})
 
 	/**
-	 * Overloaded so the upstream return type is preserved for ordinary content. Only the
-	 * group-status shape resolves to a message ID string.
+	 * Upstream `sendMessage`, with one guard: group statuses must be posted through
+	 * `sock.stianStatus`, so passing `{ groupStatusMessage }` here fails loudly instead of
+	 * silently relaying something WhatsApp will not render.
+	 *
+	 * The signature and return type are unchanged from upstream.
 	 */
-	async function sendMessage(
-		jid: string,
-		content: StianGroupStatusMessageContent,
-		options?: MiscMessageGenerationOptions
-	): Promise<string>
-	async function sendMessage(
+	const sendMessage = async (
 		jid: string,
 		content: AnyMessageContent,
-		options?: MiscMessageGenerationOptions
-	): Promise<WAMessage | undefined>
-	async function sendMessage(
-		jid: string,
-		content: AnyMessageContent | StianGroupStatusMessageContent,
 		options: MiscMessageGenerationOptions = {}
-	): Promise<WAMessage | string | undefined> {
+	): Promise<WAMessage | undefined> => {
 		if (isGroupStatusContent(content)) {
-			return stianStatus.sendGroupStatus(jid, content.groupStatusMessage, options)
+			throw new StianApiError(
+				'group statuses cannot be sent with sendMessage(). Use sock.stianStatus instead:\n' +
+					'  await sock.stianStatus.sendGroupStatus(groupJid, { text: "hello group" })\n' +
+					'  await sock.stianStatus.sendStatusToGroups({ text: "hi all" }, [groupJid])'
+			)
 		}
 
 		return sock.sendMessage(jid, content, options)

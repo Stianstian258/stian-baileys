@@ -8,10 +8,12 @@ import type { AnyRegularMessageContent, MiscMessageGenerationOptions } from './M
 export type StianGroupStatusContent = AnyRegularMessageContent
 
 /**
- * Passed to `sendMessage()` to post a group status instead of a normal message:
+ * The `{ groupStatusMessage: ... }` shape.
+ *
+ * Not accepted by `sendMessage()` — group statuses are posted through `sock.stianStatus`:
  *
  * ```ts
- * await sock.sendMessage(groupJid, { groupStatusMessage: { text: 'hello group' } })
+ * await sock.stianStatus.sendGroupStatus(groupJid, { text: 'hello group' })
  * ```
  */
 export type StianGroupStatusMessageContent = {

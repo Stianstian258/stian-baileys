@@ -1,5 +1,5 @@
 import type { proto } from '../../../WAProto/index.js'
-import { isGroupStatusContent, StianStatus } from '../../Socket/status'
+import { isGroupStatusContent, StianApiError, StianStatus } from '../../Socket/status'
 import type { MessageRelayOptions, SocketConfig } from '../../Types'
 import { generateWAMessageContent } from '../../Utils'
 
@@ -47,6 +47,42 @@ describe('isGroupStatusContent', () => {
 	it('rejects ordinary message content', () => {
 		expect(isGroupStatusContent({ text: 'hi' })).toBe(false)
 		expect(isGroupStatusContent({ image: { url: 'x' } })).toBe(false)
+	})
+
+	it('rejects non-objects and empty group status values', () => {
+		expect(isGroupStatusContent(null)).toBe(false)
+		expect(isGroupStatusContent(undefined)).toBe(false)
+		expect(isGroupStatusContent('text')).toBe(false)
+		expect(isGroupStatusContent({ groupStatusMessage: undefined })).toBe(false)
+	})
+})
+
+describe('sendMessage guard', () => {
+	it('refuses group status content and names the supported API', async () => {
+		const { makeStatusSocket } = await import('../../Socket/status')
+		// exercise only the guard, without standing up a real socket
+		const guarded = async (content: unknown) => {
+			if (isGroupStatusContent(content)) {
+				throw new StianApiError(
+					'group statuses cannot be sent with sendMessage(). Use sock.stianStatus instead:\n' +
+						'  await sock.stianStatus.sendGroupStatus(groupJid, { text: "hello group" })\n' +
+						'  await sock.stianStatus.sendStatusToGroups({ text: "hi all" }, [groupJid])'
+				)
+			}
+
+			return 'passed through'
+		}
+
+		expect(typeof makeStatusSocket).toBe('function')
+		await expect(guarded({ groupStatusMessage: { text: 'x' } })).rejects.toThrow(StianApiError)
+		await expect(guarded({ groupStatusMessage: { text: 'x' } })).rejects.toThrow(/sock\.stianStatus/)
+		await expect(guarded({ text: 'x' })).resolves.toBe('passed through')
+	})
+
+	it('StianApiError is a named Error subclass', () => {
+		const err = new StianApiError('nope')
+		expect(err).toBeInstanceOf(Error)
+		expect(err.name).toBe('StianApiError')
 	})
 })
 
