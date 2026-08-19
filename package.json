@@ -42,7 +42,7 @@
     "clean": "node -e \"require('fs').rmSync('lib',{recursive:true,force:true})\"",
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
     "gen:protobuf": "sh WAProto/GenerateStatics.sh",
-    "lint": "eslint src/Socket/status.ts src/Utils/log-filter.ts src/Types/Stian.ts src/__tests__/Socket/stian-status.test.ts src/__tests__/Utils/log-filter.test.ts",
+    "lint": "eslint src/Socket/status.ts src/Utils/log-filter.ts src/Utils/browser-utils.ts src/Types/Stian.ts src/__tests__/Socket/stian-status.test.ts src/__tests__/Utils/log-filter.test.ts src/__tests__/Utils/stian-browser.test.ts",
     "lint:all": "eslint src",
     "lint:fix": "npm run format && npm run lint -- --fix",
     "prepack": "npm run build",

@@ -10,7 +10,7 @@ Everything else â€” the socket, the protocol, the types â€” is upstrea
 
 ## What this fork adds
 
-Four things. That's the whole list.
+Five things. That's the whole list.
 
 ### 1. Group statuses / stories
 
@@ -105,7 +105,35 @@ Why not transpile a real CJS build? Because two runtime dependencies â€” `p
 binding used synchronously in the crypto path. Transpiling would produce something that throws
 `ERR_REQUIRE_ESM` at runtime. ESM remains the primary, best-supported entry point.
 
-### 4. `isJidUser` back-compat alias
+### 4. Branded linked-device name
+
+`Browsers.stian()` makes the session appear as **Stian** in WhatsApp's _Linked devices_ list,
+instead of "Chrome (Mac OS)":
+
+```ts
+import makeWASocket, { Browsers } from 'stian-baileys'
+
+const sock = makeWASocket({
+	auth: state,
+	browser: Browsers.stian() // defaults to Chrome
+})
+
+// or pick the browser yourself
+makeWASocket({ auth: state, browser: Browsers.stian('Firefox') })
+```
+
+This works because the first element of the browser tuple becomes `DeviceProps.os`, which is the
+field WhatsApp renders as the device label — the same mechanism behind the existing
+`Browsers.baileys()`.
+
+> **Tradeoff:** `syncFullHistory` only requests the full history when the OS field is `Mac OS` or
+> `Windows` **and** the browser field is `Desktop`. A custom device name cannot satisfy that, so
+> `Browsers.stian()` and full history sync are mutually exclusive. If you need the full history,
+> use `Browsers.macOS('Desktop')` and forgo the branding.
+
+It is opt-in — the default browser is unchanged, so existing bots behave exactly as before.
+
+### 5. `isJidUser` back-compat alias
 
 Baileys 6.x had `isJidUser`; 7.x renamed it to `isPnUser`. The old name is re-exported as a
 deprecated alias so 6.x-era code keeps working.
@@ -152,16 +180,17 @@ sock.ev.on('creds.update', saveCreds)
 
 ## Relationship to upstream
 
-Kept deliberately thin so upstream releases are easy to absorb. Seven upstream files are touched,
-by 20 lines in total, and nothing upstream is deleted:
+Kept deliberately thin so upstream releases are easy to absorb. Eight upstream files are touched,
+by 46 lines in total, and nothing upstream is deleted:
 
 | Upstream file                 | Delta | Change                                                        |
 | ----------------------------- | ----- | ------------------------------------------------------------- |
 | `src/Socket/index.ts`         | ~2    | use `makeStatusSocket` as the outermost socket layer          |
 | `src/Socket/messages-send.ts` | +4    | one `getMediaType` branch to resolve group-status inner media |
+| `src/Utils/browser-utils.ts`  | +22   | the `Browsers.stian` identifier and its doc comment           |
 | `src/WABinary/jid-utils.ts`   | +5    | the `isJidUser` alias and its doc comment                     |
 | `src/index.ts`                | +3    | re-export the status layer                                    |
-| `src/Types/index.ts`          | +1    | re-export `./Stian`                                           |
+| `src/Types/index.ts`          | +3    | re-export `./Stian`, add `stian` to `BrowsersMap`             |
 | `src/Utils/index.ts`          | +1    | re-export `./log-filter`                                      |
 | `eslint.config.mts`           | +4    | add a `files` pattern so linting TypeScript actually runs     |
 
@@ -172,8 +201,9 @@ Everything else is purely additive:
 | `src/Socket/status.ts`                      | the group status socket layer |
 | `src/Types/Stian.ts`                        | public types for the above    |
 | `src/Utils/log-filter.ts`                   | the libsignal console filter  |
-| `src/__tests__/Socket/stian-status.test.ts` | 9 tests                       |
+| `src/__tests__/Socket/stian-status.test.ts` | 12 tests                      |
 | `src/__tests__/Utils/log-filter.test.ts`    | 12 tests                      |
+| `src/__tests__/Utils/stian-browser.test.ts` | 7 tests                       |
 | `cjs/index.cjs`                             | CommonJS entry point          |
 
 To pull in a new upstream release:

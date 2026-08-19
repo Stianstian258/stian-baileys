@@ -23,6 +23,8 @@ export type BrowsersMap = {
 	baileys(browser: string): [string, string, string]
 	windows(browser: string): [string, string, string]
 	android(browser: string): [string, string, string]
+	/** stian-baileys: shows the linked device as "Stian" in WhatsApp */
+	stian(browser?: string): [string, string, string]
 	appropriate(browser: string): [string, string, string]
 }
 
