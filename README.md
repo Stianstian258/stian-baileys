@@ -1,4 +1,4 @@
-﻿# stian-baileys
+# stian-baileys
 
 A fork of [Baileys](https://github.com/WhiskeySockets/Baileys) (v7.0.0-rc14) that adds group
 statuses, scoped log filtering, and a CommonJS entry point.
