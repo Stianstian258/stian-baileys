@@ -1,7 +1,7 @@
 {
   "name": "stian-baileys",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A WhatsApp Web API library — Baileys 7.x with group status/story support, scoped libsignal log filtering, and a CommonJS entry point",
   "keywords": [
     "whatsapp",
@@ -35,7 +35,8 @@
     "lib/**/*",
     "cjs/**/*",
     "WAProto/**/*",
-    "engine-requirements.js"
+    "engine-requirements.js",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc -P tsconfig.build.json && tsc-esm-fix --tsconfig=tsconfig.build.json --ext=.js",

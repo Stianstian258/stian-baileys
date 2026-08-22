@@ -10,7 +10,7 @@ Everything else â€” the socket, the protocol, the types â€” is upstrea
 
 ## What this fork adds
 
-Five things. That's the whole list.
+Six things. That's the whole list.
 
 ### 1. Group statuses / stories
 
@@ -133,7 +133,30 @@ field WhatsApp renders as the device label — the same mechanism behind the exi
 
 It is opt-in — the default browser is unchanged, so existing bots behave exactly as before.
 
-### 5. `isJidUser` back-compat alias
+### 5. Auth state that survives large accounts
+
+`useMultiFileAuthState` writes one file per key, and Baileys 7 stores a LID mapping per contact.
+On a large account a single `keys.set()` call therefore tries to write thousands of files at once
+through an unbounded `Promise.all`, which exhausts the process file-descriptor limit. The symptom
+is a loop of `failed to commit mutations, retries left=N`, truncated zero-byte key files, and a bot
+that connects but cannot decrypt messages.
+
+Measured on a 9,000-entry batch:
+
+|                      | result                                             |
+| -------------------- | -------------------------------------------------- |
+| unbounded (upstream) | `EMFILE`, **811 zero-byte files**                  |
+| bounded to 32 (here) | no error, **0 zero-byte files**, marginally faster |
+
+Writes now go through a concurrency-capped queue, so throughput is unchanged and nothing truncates.
+
+The `failed to commit mutations` warning also now includes the underlying error and the affected
+key categories. Upstream logged only the message, which made a failing auth store impossible to
+diagnose from the outside.
+
+Nothing to configure — this is just how the auth store behaves here.
+
+### 6. `isJidUser` back-compat alias
 
 Baileys 6.x had `isJidUser`; 7.x renamed it to `isPnUser`. The old name is re-exported as a
 deprecated alias so 6.x-era code keeps working.
@@ -180,31 +203,34 @@ sock.ev.on('creds.update', saveCreds)
 
 ## Relationship to upstream
 
-Kept deliberately thin so upstream releases are easy to absorb. Eight upstream files are touched,
-by 46 lines in total, and nothing upstream is deleted:
+Kept deliberately thin so upstream releases are easy to absorb. Ten upstream files are touched, by
+67 added and 6 removed lines:
 
-| Upstream file                 | Delta | Change                                                        |
-| ----------------------------- | ----- | ------------------------------------------------------------- |
-| `src/Socket/index.ts`         | ~2    | use `makeStatusSocket` as the outermost socket layer          |
-| `src/Socket/messages-send.ts` | +4    | one `getMediaType` branch to resolve group-status inner media |
-| `src/Utils/browser-utils.ts`  | +22   | the `Browsers.stian` identifier and its doc comment           |
-| `src/WABinary/jid-utils.ts`   | +5    | the `isJidUser` alias and its doc comment                     |
-| `src/index.ts`                | +3    | re-export the status layer                                    |
-| `src/Types/index.ts`          | +3    | re-export `./Stian`, add `stian` to `BrowsersMap`             |
-| `src/Utils/index.ts`          | +1    | re-export `./log-filter`                                      |
-| `eslint.config.mts`           | +4    | add a `files` pattern so linting TypeScript actually runs     |
+| Upstream file                            | Delta  | Change                                                        |
+| ---------------------------------------- | ------ | ------------------------------------------------------------- |
+| `src/Utils/browser-utils.ts`             | +24 −1 | the `Browsers.stian` identifier, plus an `as any` type fix    |
+| `src/Utils/use-multi-file-auth-state.ts` | +18 −1 | bounded write concurrency                                     |
+| `src/WABinary/jid-utils.ts`              | +5     | the `isJidUser` alias and its doc comment                     |
+| `src/Socket/messages-send.ts`            | +4     | one `getMediaType` branch to resolve group-status inner media |
+| `eslint.config.mts`                      | +4     | add a `files` pattern so linting TypeScript actually runs     |
+| `src/Utils/auth-utils.ts`                | +3 −1  | log the cause when committing auth mutations fails            |
+| `src/index.ts`                           | +3     | re-export the status layer                                    |
+| `src/Types/index.ts`                     | +3     | re-export `./Stian`, add `stian` to `BrowsersMap`             |
+| `src/Socket/index.ts`                    | +2 −2  | use `makeStatusSocket` as the outermost socket layer          |
+| `src/Utils/index.ts`                     | +1     | re-export `./log-filter`                                      |
 
 Everything else is purely additive:
 
-| New file                                    | Purpose                       |
-| ------------------------------------------- | ----------------------------- |
-| `src/Socket/status.ts`                      | the group status socket layer |
-| `src/Types/Stian.ts`                        | public types for the above    |
-| `src/Utils/log-filter.ts`                   | the libsignal console filter  |
-| `src/__tests__/Socket/stian-status.test.ts` | 12 tests                      |
-| `src/__tests__/Utils/log-filter.test.ts`    | 12 tests                      |
-| `src/__tests__/Utils/stian-browser.test.ts` | 7 tests                       |
-| `cjs/index.cjs`                             | CommonJS entry point          |
+| New file                                             | Purpose                       |
+| ---------------------------------------------------- | ----------------------------- |
+| `src/Socket/status.ts`                               | the group status socket layer |
+| `src/Types/Stian.ts`                                 | public types for the above    |
+| `src/Utils/log-filter.ts`                            | the libsignal console filter  |
+| `src/__tests__/Socket/stian-status.test.ts`          | 12 tests                      |
+| `src/__tests__/Utils/log-filter.test.ts`             | 12 tests                      |
+| `src/__tests__/Utils/auth-state-concurrency.test.ts` | 3 tests                       |
+| `src/__tests__/Utils/stian-browser.test.ts`          | 7 tests                       |
+| `cjs/index.cjs`                                      | CommonJS entry point          |
 
 To pull in a new upstream release:
 
