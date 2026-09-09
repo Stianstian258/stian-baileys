@@ -385,7 +385,10 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 		}
 
 		if (!updates || !operation) {
-			logger.warn({ data }, 'invalid mex newsletter notification content')
+			// stian-baileys: this is not malformed, just a notification shape we do not model
+			// (e.g. xwa2_notify_newsletter_milestone). Nothing is actionable, so keep it at debug
+			// instead of warning on every channel milestone.
+			logger.debug({ data }, 'unhandled mex newsletter notification content')
 			return
 		}
 

@@ -664,14 +664,53 @@ const processMessage = async (
 
 		const participantsIncludesMe = () => participants.find(jid => areJidsSameUser(meId, jid.phoneNumber)) // ADD SUPPORT FOR LID
 
+		/**
+		 * stian-baileys: messageStubParameters are usually JSON participant objects, but
+		 * WhatsApp also sends bare JID strings for some group participant events. A raw
+		 * JSON.parse then throws SyntaxError, which escapes processMessage and aborts the
+		 * entire offline-notification batch — every event in that batch is lost, not just
+		 * the malformed one. Parse tolerantly and keep going.
+		 */
+		const parseStubParticipants = (params: (string | null | undefined)[] | null | undefined): GroupParticipant[] => {
+			const out: GroupParticipant[] = []
+
+			for (const raw of params || []) {
+				if (typeof raw !== 'string' || !raw.length) {
+					continue
+				}
+
+				try {
+					const parsed = JSON.parse(raw)
+					if (parsed && typeof parsed === 'object') {
+						out.push(parsed as GroupParticipant)
+						continue
+					}
+				} catch {
+					// not JSON — fall through to the bare-JID form below
+				}
+
+				if (raw.includes('@')) {
+					out.push(
+						isLidUser(raw)
+							? ({ id: raw, lid: raw } as GroupParticipant)
+							: ({ id: raw, phoneNumber: raw } as GroupParticipant)
+					)
+				} else {
+					logger?.debug({ stubParameter: raw }, 'skipping unrecognised group participant stub parameter')
+				}
+			}
+
+			return out
+		}
+
 		switch (message.messageStubType) {
 			case WAMessageStubType.GROUP_PARTICIPANT_CHANGE_NUMBER:
-				participants = message.messageStubParameters.map((a: any) => JSON.parse(a as string)) || []
+				participants = parseStubParticipants(message.messageStubParameters)
 				emitParticipantsUpdate('modify')
 				break
 			case WAMessageStubType.GROUP_PARTICIPANT_LEAVE:
 			case WAMessageStubType.GROUP_PARTICIPANT_REMOVE:
-				participants = message.messageStubParameters.map((a: any) => JSON.parse(a as string)) || []
+				participants = parseStubParticipants(message.messageStubParameters)
 				emitParticipantsUpdate('remove')
 				// mark the chat read only if you left the group
 				if (participantsIncludesMe()) {
@@ -682,7 +721,7 @@ const processMessage = async (
 			case WAMessageStubType.GROUP_PARTICIPANT_ADD:
 			case WAMessageStubType.GROUP_PARTICIPANT_INVITE:
 			case WAMessageStubType.GROUP_PARTICIPANT_ADD_REQUEST_JOIN:
-				participants = message.messageStubParameters.map((a: any) => JSON.parse(a as string)) || []
+				participants = parseStubParticipants(message.messageStubParameters)
 				if (participantsIncludesMe()) {
 					chat.readOnly = false
 				}
@@ -690,11 +729,11 @@ const processMessage = async (
 				emitParticipantsUpdate('add')
 				break
 			case WAMessageStubType.GROUP_PARTICIPANT_DEMOTE:
-				participants = message.messageStubParameters.map((a: any) => JSON.parse(a as string)) || []
+				participants = parseStubParticipants(message.messageStubParameters)
 				emitParticipantsUpdate('demote')
 				break
 			case WAMessageStubType.GROUP_PARTICIPANT_PROMOTE:
-				participants = message.messageStubParameters.map((a: any) => JSON.parse(a as string)) || []
+				participants = parseStubParticipants(message.messageStubParameters)
 				emitParticipantsUpdate('promote')
 				break
 			case WAMessageStubType.GROUP_CHANGE_ANNOUNCE:
@@ -728,10 +767,20 @@ const processMessage = async (
 				emitGroupUpdate({ joinApprovalMode: approvalMode === 'on' })
 				break
 			case WAMessageStubType.GROUP_MEMBERSHIP_JOIN_APPROVAL_REQUEST_NON_ADMIN_ADD: // TODO: Add other events
-				const participant = JSON.parse(message.messageStubParameters?.[0]) as LIDMapping
+				// stian-baileys: tolerant parse, same reasoning as parseStubParticipants above.
+				const participant = parseStubParticipants(message.messageStubParameters?.slice(0, 1))[0] as
+					LIDMapping | undefined
 				const action = message.messageStubParameters?.[1] as RequestJoinAction
 				const method = message.messageStubParameters?.[2] as RequestJoinMethod
-				emitGroupRequestJoin(participant, action, method)
+				if (participant) {
+					emitGroupRequestJoin(participant, action, method)
+				} else {
+					logger?.debug(
+						{ params: message.messageStubParameters },
+						'skipping join approval request with unparsable participant'
+					)
+				}
+
 				break
 		}
 	} /*  else if(content?.pollUpdateMessage) {

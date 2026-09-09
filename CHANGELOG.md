@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.2.1
+
+### Fixed
+
+- **A malformed group participant event no longer aborts a whole notification batch.**
+  `messageStubParameters` are usually JSON participant objects, but WhatsApp also sends bare JID
+  strings. `params.map(a => JSON.parse(a))` threw
+  `SyntaxError: Unexpected non-whitespace character after JSON at position 15`, which escaped
+  `processMessage` and surfaced as `unexpected error in 'processing offline notification'`. Every
+  event in that batch was lost, not just the malformed one, so group participant updates went
+  missing. Parsing is now tolerant: JSON objects are used as-is, bare JIDs become
+  `{ id, phoneNumber }` or `{ id, lid }`, and anything unrecognised is skipped at debug level.
+
+### Changed
+
+- Two log lines that fire during normal operation are no longer warnings:
+  - `invalid mex newsletter notification content` → `debug`, renamed to
+    `unhandled mex newsletter notification content`. Notifications such as
+    `xwa2_notify_newsletter_milestone` are simply shapes the library does not model, not malformed
+    input, and they fire on every channel milestone.
+  - `Buffer timeout reached, auto-flushing` → `debug`. The safety flush is expected behaviour, so a
+    healthy socket was logging warnings continuously.
+
+  Both are still visible at `LOG_LEVEL=debug`.
+
 ## 0.2.0
 
 ### Breaking

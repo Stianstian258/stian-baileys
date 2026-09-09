@@ -101,7 +101,9 @@ export const makeEventBuffer = (logger: ILogger): BaileysBufferableEventEmitter 
 
 			bufferTimeout = setTimeout(() => {
 				if (isBuffering) {
-					logger.warn('Buffer timeout reached, auto-flushing')
+					// stian-baileys: the safety flush is normal operation, not a fault. Warning on
+					// it means a healthy socket logs warnings continuously.
+					logger.debug('buffer timeout reached, auto-flushing')
 					flush()
 				}
 			}, BUFFER_TIMEOUT_MS)
