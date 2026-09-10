@@ -103,6 +103,29 @@ export const toNumber = (t: Long | number | null | undefined): number =>
 /** unix timestamp of a date in seconds */
 export const unixTimestampSeconds = (date: Date = new Date()) => Math.floor(date.getTime() / 1000)
 
+/**
+ * Whether a `creds.update` should announce a new push name to the server.
+ *
+ * stian-baileys: the original condition was `creds.me?.name !== name`, with no check that a
+ * name was actually present. Most creds updates carry no `me` at all — key rotation, prekey
+ * consumption, every decrypt — so `name` was `undefined` and the comparison was true almost
+ * every time. Since the binary encoder drops undefined attributes, the resulting node went
+ * out as a bare `<presence/>` with no `type`, which the server reads as "available". The
+ * effect was a socket that announced itself online continuously, ignoring
+ * `markOnlineOnConnect: false`.
+ *
+ * Requiring a truthy incoming name makes the check match its documented intent: announce
+ * only when a name has genuinely just been received, and only when it differs.
+ *
+ * Declared as a type predicate so the caller narrows `incomingName` to `string` without a
+ * non-null assertion. The `!` that used to sit on that attribute is what allowed the bug to
+ * typecheck in the first place; without it the compiler now rejects this class of mistake.
+ */
+export const shouldAnnouncePushName = (
+	currentName: string | null | undefined,
+	incomingName: string | null | undefined
+): incomingName is string => !!incomingName && currentName !== incomingName
+
 export type DebouncedTimeout = ReturnType<typeof debouncedTimeout>
 
 export const debouncedTimeout = (intervalMs = 1000, task?: () => void) => {
