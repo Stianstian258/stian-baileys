@@ -1056,7 +1056,14 @@ export const makeSocket = (config: SocketConfig) => {
 			logger.debug({ name }, 'updated pushName')
 			sendNode({
 				tag: 'presence',
-				attrs: { name }
+				attrs: {
+					// stian-baileys: publishing a push name should not change availability. Without
+					// an explicit type the server defaults this to "available", so a socket
+					// configured with markOnlineOnConnect: false still went online once at login.
+					// Strip '@' for the same reason sendPresenceUpdate does — it breaks the attr.
+					name: name.replace(/@/g, ''),
+					type: config.markOnlineOnConnect ? 'available' : 'unavailable'
+				}
 			}).catch(err => {
 				logger.warn({ trace: err.stack }, 'error in sending presence update on name change')
 			})

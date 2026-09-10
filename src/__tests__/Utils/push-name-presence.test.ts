@@ -1,6 +1,6 @@
+import { shouldAnnouncePushName } from '../../Utils/generics'
 import type { BinaryNode } from '../../WABinary'
 import { decodeBinaryNode, encodeBinaryNode } from '../../WABinary'
-import { shouldAnnouncePushName } from '../../Utils/generics'
 
 /**
  * Regression cover for the socket announcing itself online continuously.

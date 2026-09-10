@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.2.2
+
+### Fixed
+
+- **The socket no longer announces itself online on every `creds.update`.** The handler sent a
+  presence node whenever `creds.me?.name !== update.me?.name`, without checking that a name was
+  present. Most creds updates carry no `me` at all — key rotation, prekey consumption, every
+  decrypt — so the incoming name was `undefined` and the comparison was true almost every time.
+  Since the binary encoder drops undefined attributes, the node went out as a bare `<presence/>`
+  with no `type`, which the server reads as `available`. The account appeared permanently online,
+  announced in the background, regardless of configuration.
+
+  The decision now lives in `shouldAnnouncePushName()`, declared as a type predicate so the caller
+  narrows without a non-null assertion. That `!` is what allowed the bug to typecheck; removing it
+  means the compiler rejects the same mistake in future.
+
+### Changed
+
+- **Publishing a push name no longer changes availability.** Even with the guard above, a genuine
+  name change — which happens once, just after login — still sent a typeless presence implying
+  `available`, so a socket configured with `markOnlineOnConnect: false` got one online blip anyway.
+  The node now states its type explicitly:
+
+  ```ts
+  attrs: { name, type: config.markOnlineOnConnect ? 'available' : 'unavailable' }
+  ```
+
+  `@` is also stripped from the name, matching what `sendPresenceUpdate` already does.
+
+  If you relied on login implicitly marking you online while setting `markOnlineOnConnect: false`,
+  that no longer happens. Call `sendPresenceUpdate('available')` yourself.
+
+Both changes are to code that was byte-identical to upstream Baileys 7.0.0-rc14.
+
 ## 0.2.1
 
 ### Fixed

@@ -1,7 +1,7 @@
 {
   "name": "stian-baileys",
   "type": "module",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A WhatsApp Web API library — Baileys 7.x with group status/story support, scoped libsignal log filtering, and a CommonJS entry point",
   "keywords": [
     "whatsapp",
@@ -43,7 +43,7 @@
     "clean": "node -e \"require('fs').rmSync('lib',{recursive:true,force:true})\"",
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
     "gen:protobuf": "sh WAProto/GenerateStatics.sh",
-    "lint": "eslint src/Socket/status.ts src/Utils/log-filter.ts src/Utils/browser-utils.ts src/Types/Stian.ts src/__tests__/Socket/stian-status.test.ts src/__tests__/Utils/log-filter.test.ts src/__tests__/Utils/stian-browser.test.ts src/__tests__/Utils/auth-state-concurrency.test.ts src/__tests__/Utils/stub-participants.test.ts",
+    "lint": "eslint src/Socket/status.ts src/Utils/log-filter.ts src/Utils/browser-utils.ts src/Types/Stian.ts src/__tests__/Socket/stian-status.test.ts src/__tests__/Utils/log-filter.test.ts src/__tests__/Utils/stian-browser.test.ts src/__tests__/Utils/auth-state-concurrency.test.ts src/__tests__/Utils/stub-participants.test.ts src/__tests__/Utils/push-name-presence.test.ts",
     "lint:all": "eslint src",
     "lint:fix": "npm run format && npm run lint -- --fix",
     "prepack": "npm run build",
