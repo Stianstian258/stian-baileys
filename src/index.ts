@@ -9,6 +9,7 @@ export * from './WAM/index'
 export * from './WAUSync/index'
 
 // stian-baileys additions
+export { buildButtonNodes, normaliseButtons, StianButtons } from './Socket/buttons'
 export { isGroupStatusContent, makeStatusSocket, StianApiError, StianStatus } from './Socket/status'
 
 export type WASocket = ReturnType<typeof makeWASocket>

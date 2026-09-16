@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+
+- **`sock.stianButtons` — interactive (native flow) button messages.** Upstream can encode the
+  `interactiveMessage` proto, but it never attaches the binary nodes WhatsApp requires, so
+  buttons sent through plain `sendMessage` are accepted by the server and render as nothing.
+  This adds the `biz > interactive > native_flow` node chain that makes them display.
+
+  ```ts
+  await sock.stianButtons.send(jid, {
+  	title: 'Order #1042',
+  	text: 'Ready when you are.',
+  	buttons: [
+  		{ id: 'confirm', text: 'Confirm' },
+  		{ id: 'cancel', text: 'Cancel' }
+  	]
+  })
+  ```
+
+  - `{ id, text }` is shorthand for a `quick_reply`.
+  - Otherwise name the flow and pass `params` as an object; it's serialised into
+    `buttonParamsJson` for you. A prebuilt `buttonParamsJson` string still wins if you pass one.
+  - `quick_reply`, `single_select`, `cta_url`, `cta_copy` and `cta_call` are typed, being the
+    names that reliably render for ordinary bots. Other names are accepted as strings but
+    WhatsApp commonly ignores them outside official or business clients.
+  - An optional header `image` is uploaded and attached as `header.imageMessage`.
+  - Dedicated flows (`mpm`, `cta_catalog`, `send_location`, `call_permission_request`,
+    `wa_payment_transaction_details`, `automated_greeting_message_view_catalog`) emit a
+    `native_flow` node at `v=2` under their own name; everything else rides the generic
+    `v=9`/`mixed` node. `review_and_pay` and `payment_info` flatten onto a `biz` node carrying
+    `native_flow_name`.
+  - `build()` returns the content without sending. An empty `buttons` array throws rather than
+    sending a message that renders blank.
+
+- **`botNode` option on `stianButtons.send`.** Attaches `{ tag: 'bot', attrs: { biz_bot: '1' } }`
+  to the relay stanza for 1:1 chats. This appears to be what allows interactive flows to render
+  in private chats, and also marks the message as coming from a business bot, which may be what
+  surfaces a bot/AI label. Defaults to `true` for 1:1 and `false` for groups; the `bot` node is
+  never sent to groups regardless. This default is the best reading of undocumented behaviour
+  rather than a verified fact — the reference implementation documents this node both as
+  automatic-and-required and as an opt-in AI flag. Set it explicitly to opt out.
+
+- `StianButtons`, `normaliseButtons` and `buildButtonNodes` are exported for direct use, along
+  with the `StianButton`, `StianButtonsContent`, `StianButtonsOptions`, `StianNativeFlowButton`,
+  `StianQuickReplyButton`, `StianSelectRow` and `StianStableButtonName` types.
+
+- 25 tests covering button normalisation, node construction per flow type, the `botNode` matrix,
+  header and media handling, and a proto encode/decode round-trip.
+
 ## 0.2.2
 
 ### Fixed

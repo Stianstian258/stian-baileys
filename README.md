@@ -10,7 +10,7 @@ Everything else â€” the socket, the protocol, the types â€” is upstrea
 
 ## What this fork adds
 
-Six things. That's the whole list.
+Seven things. That's the whole list.
 
 ### 1. Group statuses / stories
 
@@ -161,6 +161,78 @@ Nothing to configure — this is just how the auth store behaves here.
 Baileys 6.x had `isJidUser`; 7.x renamed it to `isPnUser`. The old name is re-exported as a
 deprecated alias so 6.x-era code keeps working.
 
+### 7. Interactive buttons
+
+`sock.stianButtons` sends native-flow (interactive) messages. Upstream can encode the proto but
+doesn't attach the binary nodes WhatsApp needs, so buttons sent through plain `sendMessage`
+arrive and render as nothing. This adds those nodes.
+
+```ts
+await sock.stianButtons.send(jid, {
+	title: 'Order #1042',
+	text: 'Ready when you are.',
+	footer: 'stian-baileys',
+	buttons: [
+		{ id: 'confirm', text: 'Confirm' },
+		{ id: 'cancel', text: 'Cancel' }
+	]
+})
+```
+
+The `{ id, text }` shorthand becomes a `quick_reply`. For anything else, name the flow and pass
+`params` as a plain object — it's serialised into `buttonParamsJson` for you, which is the step
+people usually forget:
+
+```ts
+await sock.stianButtons.send(jid, {
+	text: 'Links',
+	buttons: [
+		{ name: 'cta_url', params: { display_text: 'Docs', url: 'https://example.dev' } },
+		{ name: 'cta_copy', params: { display_text: 'Copy code', copy_code: 'ABC123' } },
+		{
+			name: 'single_select',
+			params: {
+				title: 'Pick one',
+				sections: [{ title: 'Sizes', rows: [{ header: '', title: 'Large', description: '', id: 'lg' }] }]
+			}
+		}
+	]
+})
+```
+
+An optional header image is uploaded and attached for you:
+
+```ts
+await sock.stianButtons.send(jid, {
+	title: 'New drop',
+	image: { url: './poster.jpg' },
+	buttons: [{ id: 'buy', text: 'Buy' }]
+})
+```
+
+Five flow names are typed (`quick_reply`, `single_select`, `cta_url`, `cta_copy`, `cta_call`)
+because those are the ones that reliably render for ordinary bots. Any other name is still
+accepted as a string — payment and catalog flows encode fine but WhatsApp usually ignores them
+outside official or business clients.
+
+`build()` returns the message content without sending, if you want to inspect or relay it
+yourself. Passing an empty `buttons` array throws rather than sending a message that renders
+blank.
+
+**The `botNode` option.** For 1:1 chats this attaches `{ tag: 'bot', attrs: { biz_bot: '1' } }`
+to the relay stanza, which appears to be what lets interactive flows render in private chats. It
+also marks the message as coming from a business bot, which may be what surfaces a bot/AI label.
+It defaults to `true` for 1:1 and `false` for groups (groups need only the `biz` node, and the
+`bot` node is never sent there). Set it explicitly to opt out:
+
+```ts
+await sock.stianButtons.send(jid, { text: 'hi', buttons: [...] }, { botNode: false })
+```
+
+That default is the best available reading of undocumented behaviour, not a verified fact — the
+reference implementation's own docs describe this node both as automatic-and-required and as an
+opt-in AI flag. If your buttons don't render in DMs, try flipping it.
+
 ## Install
 
 ```bash
@@ -178,7 +250,7 @@ declared stable, and breaking changes land in the **minor** slot — `0.1.0` →
 Pin accordingly if you need stability:
 
 ```bash
-npm install stian-baileys@~0.1.0   # patch updates only
+npm install stian-baileys@~0.3.0   # patch updates only
 ```
 
 Once upstream ships 7.0.0 final and this API settles, it moves to `1.0.0` and normal semver
@@ -186,8 +258,8 @@ guarantees apply from there.
 
 ## Usage
 
-Identical to upstream Baileys â€” see the
-[Baileys documentation](https://github.com/WhiskeySockets/Baileys). Only the four additions above
+Identical to upstream Baileys — see the
+[Baileys documentation](https://github.com/WhiskeySockets/Baileys). Only the additions above
 differ.
 
 ```ts
@@ -214,23 +286,25 @@ Kept deliberately thin so upstream releases are easy to absorb. Ten upstream fil
 | `src/Socket/messages-send.ts`            | +4     | one `getMediaType` branch to resolve group-status inner media |
 | `eslint.config.mts`                      | +4     | add a `files` pattern so linting TypeScript actually runs     |
 | `src/Utils/auth-utils.ts`                | +3 −1  | log the cause when committing auth mutations fails            |
-| `src/index.ts`                           | +3     | re-export the status layer                                    |
+| `src/index.ts`                           | +4     | re-export the status and buttons layers                       |
 | `src/Types/index.ts`                     | +3     | re-export `./Stian`, add `stian` to `BrowsersMap`             |
 | `src/Socket/index.ts`                    | +2 −2  | use `makeStatusSocket` as the outermost socket layer          |
 | `src/Utils/index.ts`                     | +1     | re-export `./log-filter`                                      |
 
 Everything else is purely additive:
 
-| New file                                             | Purpose                       |
-| ---------------------------------------------------- | ----------------------------- |
-| `src/Socket/status.ts`                               | the group status socket layer |
-| `src/Types/Stian.ts`                                 | public types for the above    |
-| `src/Utils/log-filter.ts`                            | the libsignal console filter  |
-| `src/__tests__/Socket/stian-status.test.ts`          | 12 tests                      |
-| `src/__tests__/Utils/log-filter.test.ts`             | 12 tests                      |
-| `src/__tests__/Utils/auth-state-concurrency.test.ts` | 3 tests                       |
-| `src/__tests__/Utils/stian-browser.test.ts`          | 7 tests                       |
-| `cjs/index.cjs`                                      | CommonJS entry point          |
+| New file                                             | Purpose                      |
+| ---------------------------------------------------- | ---------------------------- |
+| `src/Socket/status.ts`                               | the stian socket layer       |
+| `src/Socket/buttons.ts`                              | interactive button support   |
+| `src/Types/Stian.ts`                                 | public types for the above   |
+| `src/Utils/log-filter.ts`                            | the libsignal console filter |
+| `src/__tests__/Socket/stian-status.test.ts`          | 12 tests                     |
+| `src/__tests__/Socket/stian-buttons.test.ts`         | 25 tests                     |
+| `src/__tests__/Utils/log-filter.test.ts`             | 12 tests                     |
+| `src/__tests__/Utils/auth-state-concurrency.test.ts` | 3 tests                      |
+| `src/__tests__/Utils/stian-browser.test.ts`          | 7 tests                      |
+| `cjs/index.cjs`                                      | CommonJS entry point         |
 
 To pull in a new upstream release:
 

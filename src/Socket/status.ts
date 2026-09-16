@@ -22,6 +22,7 @@ import {
 import { getUrlInfo } from '../Utils/link-preview'
 import type { ILogger } from '../Utils/logger'
 import { isJidGroup, isPnUser, jidNormalizedUser, STORIES_JID } from '../WABinary'
+import { StianButtons } from './buttons'
 import { makeCommunitiesSocket } from './communities'
 
 /** `protocolMessage.type` used by WhatsApp to point at a status/story. */
@@ -300,13 +301,24 @@ export class StianApiError extends Error {
 }
 
 /**
- * Final socket layer. Adds `sock.stianStatus`, the only supported entry point for group
- * statuses. `sendMessage()` keeps its exact upstream signature and behaviour for ordinary
- * messages, but rejects group-status content rather than handling it.
+ * Final socket layer, carrying every stian-baileys addition.
+ *
+ * - `sock.stianStatus` is the only supported entry point for group statuses. `sendMessage()`
+ *   keeps its exact upstream signature and behaviour for ordinary messages, but rejects
+ *   group-status content rather than handling it.
+ * - `sock.stianButtons` sends interactive (native flow) button messages.
  */
 export const makeStatusSocket = (config: SocketConfig) => {
 	const sock = makeCommunitiesSocket(config)
 	const { logger } = config
+
+	const stianButtons = new StianButtons({
+		config,
+		logger,
+		relayMessage: sock.relayMessage,
+		waUploadToServer: sock.waUploadToServer,
+		getSelfJid: () => jidNormalizedUser(sock.authState.creds.me?.id)
+	})
 
 	const stianStatus = new StianStatus({
 		config,
@@ -343,6 +355,7 @@ export const makeStatusSocket = (config: SocketConfig) => {
 	return {
 		...sock,
 		stianStatus,
+		stianButtons,
 		sendMessage
 	}
 }
